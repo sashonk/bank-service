@@ -54,6 +54,10 @@ public class BillingTransaction {
         this.dateTimeCreated = dateTimeCreated;
     }
 
+    public List<Posting> getPostings() {
+        return postings;
+    }
+
     public void addPosting(Posting posting) {
         this.postings.add(posting);
         posting.setTransaction(this);

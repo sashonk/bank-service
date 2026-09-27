@@ -1,14 +1,17 @@
 package ru.asocial.learn.day2.mapper;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import ru.asocial.learn.day2.dto.billing.BillingAccountDTO;
 import ru.asocial.learn.day2.dto.ClientDTO;
-import ru.asocial.learn.day2.model.billing.BillingAccount;
 import ru.asocial.learn.day2.model.Client;
+import ru.asocial.learn.day2.model.billing.BillingAccount;
 import java.util.LinkedList;
 
 @Component
 public class ClientMapper {
+
+    @Autowired
+    private BillingAccountMapper billingAccountMapper;
 
     public ClientDTO map(Client entity, boolean mapAccounts) {
         ClientDTO dto = new ClientDTO();
@@ -16,12 +19,7 @@ public class ClientMapper {
         dto.setAccounts(new LinkedList<>());
         if (mapAccounts) {
             for (BillingAccount account : entity.getAccounts()) {
-                BillingAccountDTO billingAccountDTO = new BillingAccountDTO();
-                billingAccountDTO.setAccountNumber(account.getAccountNumber());
-                billingAccountDTO.setCurrencyId(account.getCurrency().getId());
-                billingAccountDTO.setCurrencyCode(account.getCurrency().getCode());
-                billingAccountDTO.setId(account.getId());
-                dto.getAccounts().add(billingAccountDTO);
+                dto.getAccounts().add(billingAccountMapper.map(account));
             }
         }
         dto.setFirstName(entity.getFirstName());

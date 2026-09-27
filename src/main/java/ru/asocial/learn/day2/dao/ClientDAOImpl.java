@@ -17,9 +17,8 @@ public class ClientDAOImpl implements ClientDao {
     private EntityManager entityManager;
 
     @Override
-    public Optional<Client> getById(long id) {
-        Client clientOrNull = entityManager.find(Client.class, id);
-        return Optional.ofNullable(clientOrNull);
+    public Client getById(long id) {
+        return entityManager.find(Client.class, id);
     }
 
     @Override

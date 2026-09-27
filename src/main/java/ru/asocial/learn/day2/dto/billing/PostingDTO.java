@@ -1,40 +1,16 @@
-package ru.asocial.learn.day2.model;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import ru.asocial.learn.day2.model.billing.BillingTransaction;
+package ru.asocial.learn.day2.dto.billing;
 
 import java.math.BigDecimal;
 
-@Entity
-public class Posting {
+public class PostingDTO {
 
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private BillingTransaction transaction;
-
-    @Id
     private Integer id;
 
-    @Column
     private String debitAccount;
 
-    @Column
     private String creditAccount;
 
-    @Column
     private BigDecimal amount;
-
-    public BillingTransaction getTransaction() {
-        return transaction;
-    }
-
-    public void setTransaction(BillingTransaction transaction) {
-        this.transaction = transaction;
-    }
 
     public Integer getId() {
         return id;

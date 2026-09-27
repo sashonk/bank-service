@@ -30,7 +30,6 @@ public class Client {
     @Column
     private String externalId;
 
-    @ManyToOne
     @OneToMany(mappedBy = "client", fetch = FetchType.LAZY, orphanRemoval = true, cascade = CascadeType.ALL)
     private List<BillingAccount> accounts = new ArrayList<>();
 

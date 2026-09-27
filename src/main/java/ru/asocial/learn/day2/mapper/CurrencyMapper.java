@@ -11,5 +11,4 @@ public class CurrencyMapper {
         return new CurrencyDto(currency.getId(), currency.getCode(), currency.getName());
     }
 
-
 }
