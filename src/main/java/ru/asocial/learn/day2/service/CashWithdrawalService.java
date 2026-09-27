@@ -7,7 +7,7 @@ import ru.asocial.learn.day2.model.BusinessOperation;
 public class CashWithdrawalService {
 
     public void processCashWithdrawal(BusinessOperation businessOperation) {
-        //TODO
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 
 }

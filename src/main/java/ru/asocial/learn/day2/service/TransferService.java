@@ -7,7 +7,7 @@ import ru.asocial.learn.day2.model.BusinessOperation;
 public class TransferService {
 
     public void processTransfer(BusinessOperation businessOperation) {
-        //TODO
+        throw new UnsupportedOperationException("Not implemented yet");
     }
 
 }

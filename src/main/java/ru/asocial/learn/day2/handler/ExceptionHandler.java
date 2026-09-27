@@ -23,4 +23,10 @@ public class ExceptionHandler  extends ResponseEntityExceptionHandler {
         ErrorResponse response = new ErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT.value(), StringUtils.firstNonBlank(duplicateResourceException.getMessage(), HttpStatus.NOT_FOUND.getReasonPhrase()));
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT.value()).body(response);
     }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleUnsupportedOperation(UnsupportedOperationException unsupportedOperationException) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.NOT_IMPLEMENTED.value(), StringUtils.firstNonBlank(unsupportedOperationException.getMessage(), HttpStatus.NOT_IMPLEMENTED.getReasonPhrase()));
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED.value()).body(response);
+    }
 }
