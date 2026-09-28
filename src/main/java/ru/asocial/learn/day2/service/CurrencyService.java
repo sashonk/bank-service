@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.asocial.learn.day2.dto.CreateCurrencyDto;
 import ru.asocial.learn.day2.dto.CurrencyDto;
 import ru.asocial.learn.day2.exception.DuplicateResourceException;
+import ru.asocial.learn.day2.exception.IncorrectResultSizeException;
 import ru.asocial.learn.day2.exception.ResourceNotFoundException;
 import ru.asocial.learn.day2.dao.CurrencyDao;
 import ru.asocial.learn.day2.mapper.CurrencyMapper;
@@ -33,23 +34,36 @@ public class CurrencyService {
 
     @Transactional(readOnly = true)
     public CurrencyDto getCurrencyById(Long id) {
-        Currency entity = currencyDao.getById(id);
-        if (entity == null) {
-            throw new ResourceNotFoundException("currency not found, id = " + id);
-        }
+        Currency entity = getCurrencyOrThrow(id);
         return new CurrencyDto(entity.getId(), entity.getCode(), entity.getName());
     }
 
     @Transactional(readOnly = true)
-    public List<CurrencyDto> findByCode(String code) {
-        Optional<Currency> result = currencyDao.findByCode(code);
-        if (result.isPresent()) {
-            Currency currency = result.get();
-            return Collections.singletonList(currencyMapper.map(currency));
+    public Currency getCurrencyOrThrow(Long id) {
+        Currency entity = currencyDao.getById(id);
+        if (entity == null) {
+            throw new ResourceNotFoundException("currency not found, id = " + id);
+        }
+        return entity;
+    }
+
+    @Transactional(readOnly = true)
+    public Currency findEntityByCodeOrThrow(String code) {
+        List<Currency> result = currencyDao.findByCode(code);
+        if (result.isEmpty()) {
+            throw new ResourceNotFoundException(code);
+        }
+        if (result.size() == 1) {
+            return result.get(0);
         }
         else {
-            return Collections.emptyList();
+            throw new IncorrectResultSizeException("Expected list size 1, but was " + result.size());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public CurrencyDto findByCodeOrThrow(String code) {
+        return currencyMapper.map(findEntityByCodeOrThrow(code));
     }
 
     @Transactional

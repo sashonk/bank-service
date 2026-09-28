@@ -29,4 +29,10 @@ public class ExceptionHandler  extends ResponseEntityExceptionHandler {
         ErrorResponse response = new ErrorResponse(HttpStatus.NOT_IMPLEMENTED.value(), StringUtils.firstNonBlank(unsupportedOperationException.getMessage(), HttpStatus.NOT_IMPLEMENTED.getReasonPhrase()));
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED.value()).body(response);
     }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleUnsupportedOperation(RuntimeException unsupportedOperationException) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), StringUtils.firstNonBlank(unsupportedOperationException.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase()));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR.value()).body(response);
+    }
 }

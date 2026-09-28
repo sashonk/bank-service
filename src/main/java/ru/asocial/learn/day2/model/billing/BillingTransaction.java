@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
-import ru.asocial.learn.day2.model.Posting;
 
 import java.time.Instant;
 import java.util.ArrayList;

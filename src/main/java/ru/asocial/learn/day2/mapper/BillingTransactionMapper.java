@@ -3,7 +3,7 @@ package ru.asocial.learn.day2.mapper;
 import org.springframework.stereotype.Component;
 import ru.asocial.learn.day2.dto.billing.BillingTransactionDTO;
 import ru.asocial.learn.day2.dto.billing.PostingDTO;
-import ru.asocial.learn.day2.model.Posting;
+import ru.asocial.learn.day2.model.billing.Posting;
 import ru.asocial.learn.day2.model.billing.BillingTransaction;
 
 import java.util.LinkedList;

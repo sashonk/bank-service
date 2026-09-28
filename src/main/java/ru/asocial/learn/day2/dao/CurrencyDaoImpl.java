@@ -6,6 +6,7 @@ import jakarta.persistence.TypedQuery;
 import org.springframework.stereotype.Repository;
 import ru.asocial.learn.day2.model.Currency;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -20,11 +21,10 @@ public class CurrencyDaoImpl implements CurrencyDao {
     }
 
     @Override
-    public Optional<Currency> findByCode(String code) {
+    public List<Currency> findByCode(String code) {
         TypedQuery<Currency> query = entityManager.createQuery("select c from Currency c where c.code = :code", Currency.class);
         query.setParameter("code", code);
-        Currency entity = query.getSingleResultOrNull();
-        return Optional.ofNullable(entity);
+        return query.getResultList();
     }
 
     @Override

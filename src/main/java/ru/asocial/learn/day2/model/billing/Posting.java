@@ -1,4 +1,4 @@
-package ru.asocial.learn.day2.model;
+package ru.asocial.learn.day2.model.billing;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
-import ru.asocial.learn.day2.model.billing.BillingTransaction;
 
 import java.math.BigDecimal;
 

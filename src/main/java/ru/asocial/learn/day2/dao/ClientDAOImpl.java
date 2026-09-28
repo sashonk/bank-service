@@ -29,11 +29,7 @@ public class ClientDAOImpl implements ClientDao {
     }
 
     @Override
-    public Client createClient(CreateClientDTO createClientDTO) {
-        Client client = new Client();
-        client.setFirstName(createClientDTO.getFirstName());
-        client.setLastName(createClientDTO.getLastName());
-        client.setExternalId(createClientDTO.getExternalId());
+    public Client save(Client client) {
         entityManager.persist(client);
         return client;
     }

@@ -32,8 +32,8 @@ public class CurrencyController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CurrencyDto>> findByCode(@RequestParam String code) throws Exception {
-        List<CurrencyDto> result = currencyService.findByCode(code);
+    public ResponseEntity<CurrencyDto> findByCode(@RequestParam String code) throws Exception {
+        CurrencyDto result = currencyService.findByCodeOrThrow(code);
         return ResponseEntity.ok(result);
     }
 
