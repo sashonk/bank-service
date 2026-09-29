@@ -35,7 +35,7 @@ public class BusinessOperationService {
         Client client = clientService.getClientOrThrow(businessOperationDTO.getClientId());
         businessOperation.setClient(client);
         businessOperation.setAccountNumber(businessOperationDTO.getAccountNumber());
-        businessOperation.setAmount(businessOperation.getAmount());
+        businessOperation.setAmount(businessOperationDTO.getAmount());
         businessOperation.setOperationType(BusinessOperation.BusinessOperationType.valueOf(businessOperationDTO.getOperationType()));
         if (businessOperationDTO.getAccountNumber2() != null) {
             businessOperation.setAccountNumber2(businessOperationDTO.getAccountNumber2());

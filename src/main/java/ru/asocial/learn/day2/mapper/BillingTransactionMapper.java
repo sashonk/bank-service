@@ -21,8 +21,8 @@ public class BillingTransactionMapper {
             for (Posting posting : entity.getPostings()) {
                 PostingDTO postingDTO = new PostingDTO();
                 postingDTO.setId(posting.getId());
-                postingDTO.setDebitAccount(posting.getDebitAccount());
-                postingDTO.setCreditAccount(posting.getCreditAccount());
+                postingDTO.setDebitAccount(posting.getDebitAccount().getAccountNumber());
+                postingDTO.setCreditAccount(posting.getCreditAccount().getAccountNumber());
                 postingDTO.setAmount(posting.getAmount());
                 dto.getPostings().add(postingDTO);
             }

@@ -19,13 +19,13 @@ public class Posting {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
-    @Column
-    private String debitAccount;
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    private BillingAccount debitAccount;
 
-    @Column
-    private String creditAccount;
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    private BillingAccount creditAccount;
 
     @Column
     private BigDecimal amount;
@@ -38,27 +38,27 @@ public class Posting {
         this.transaction = transaction;
     }
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getDebitAccount() {
+    public BillingAccount getDebitAccount() {
         return debitAccount;
     }
 
-    public void setDebitAccount(String debitAccount) {
+    public void setDebitAccount(BillingAccount debitAccount) {
         this.debitAccount = debitAccount;
     }
 
-    public String getCreditAccount() {
+    public BillingAccount getCreditAccount() {
         return creditAccount;
     }
 
-    public void setCreditAccount(String creditAccount) {
+    public void setCreditAccount(BillingAccount creditAccount) {
         this.creditAccount = creditAccount;
     }
 

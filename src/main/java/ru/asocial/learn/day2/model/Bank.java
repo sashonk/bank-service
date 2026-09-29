@@ -10,6 +10,9 @@ import jakarta.persistence.Entity;
 public class Bank extends Party {
 
     @Column
+    private String code;
+
+    @Column
     private String name;
 
     public String getName() {
@@ -18,5 +21,13 @@ public class Bank extends Party {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
     }
 }

@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.asocial.learn.day2.dto.BusinessOperationDTO;
 import ru.asocial.learn.day2.dto.CreateBusinessOperationDTO;
-import ru.asocial.learn.day2.model.BusinessOperation;
 import ru.asocial.learn.day2.service.BusinessOperationService;
 
 import java.net.URI;
