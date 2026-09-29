@@ -11,6 +11,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import ru.asocial.learn.day2.dao.ClientDao;
 import ru.asocial.learn.day2.dao.CurrencyDao;
+import ru.asocial.learn.day2.dao.billing.PostingDAO;
 import ru.asocial.learn.day2.dto.ClientDTO;
 import ru.asocial.learn.day2.dto.CreateClientDTO;
 import ru.asocial.learn.day2.dto.billing.BillingAccountDTO;
@@ -41,6 +42,9 @@ public class ClientService {
     @Autowired
     private BillingAccountMapper billingAccountMapper;
 
+    @Autowired
+    private PostingDAO postingDAO;
+
     @Transactional(readOnly = true)
     public ClientDTO findClientByExtId(String externalId) {
         //TODO
@@ -58,7 +62,9 @@ public class ClientService {
     @Transactional(readOnly = true)
     public ClientDTO getClientWithAccountsById(Long id) {
         Client client = getClientOrThrow(id);
-        return clientMapper.map(client, true);
+        ClientDTO dto = clientMapper.map(client, true);
+        fillAccountBalances(dto);
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +107,20 @@ public class ClientService {
         }
 
         client = clientDao.save(client);
-        return clientMapper.map(client, true);
+        ClientDTO dto = clientMapper.map(client, true);
+        fillAccountBalances(dto);
+        return dto;
+    }
+
+    /**
+     * Баланс — производное от проводок (issue #3), заполняется в DTO после маппинга.
+     */
+    private void fillAccountBalances(ClientDTO dto) {
+        if (dto.getAccounts() == null) {
+            return;
+        }
+        for (BillingAccountDTO account : dto.getAccounts()) {
+            account.setBalance(postingDAO.getAccountBalance(account.getId()));
+        }
     }
 }

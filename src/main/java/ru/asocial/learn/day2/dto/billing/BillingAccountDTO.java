@@ -1,5 +1,7 @@
 package ru.asocial.learn.day2.dto.billing;
 
+import java.math.BigDecimal;
+
 public class BillingAccountDTO {
 
     private long id;
@@ -9,6 +11,19 @@ public class BillingAccountDTO {
     private Long currencyId;
 
     private String currencyCode;
+
+    /**
+     * Баланс счёта, вычисленный из проводок (сумма credit − сумма debit).
+     */
+    private BigDecimal balance;
+
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public void setBalance(BigDecimal balance) {
+        this.balance = balance;
+    }
 
     public long getId() {
         return id;
