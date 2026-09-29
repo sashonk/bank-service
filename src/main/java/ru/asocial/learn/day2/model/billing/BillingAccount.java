@@ -8,8 +8,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import ru.asocial.learn.day2.model.Client;
 import ru.asocial.learn.day2.model.Currency;
+import ru.asocial.learn.day2.model.Party;
 
 @Entity
 public class BillingAccount {
@@ -26,8 +26,8 @@ public class BillingAccount {
     private Currency currency;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "client_id")
-    private Client client;
+    @JoinColumn(name = "party_id")
+    private Party party;
 
     public Long getId() {
         return id;
@@ -53,12 +53,12 @@ public class BillingAccount {
         this.currency = currency;
     }
 
-    public Client getClient() {
-        return client;
+    public Party getParty() {
+        return party;
     }
 
-    public void setClient(Client client) {
-        this.client = client;
+    public void setParty(Party party) {
+        this.party = party;
     }
 
 }
