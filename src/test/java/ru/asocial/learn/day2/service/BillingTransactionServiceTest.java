@@ -1,14 +1,16 @@
-package ru.asocial.learn.day2.dao.billing;
+package ru.asocial.learn.day2.service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import ru.asocial.learn.day2.dao.billing.BillingTransactionDAOImpl;
 import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.Client;
 import ru.asocial.learn.day2.model.Currency;
+import ru.asocial.learn.day2.model.Party;
 import ru.asocial.learn.day2.model.billing.BillingAccount;
 import ru.asocial.learn.day2.model.billing.BillingTransaction;
 import ru.asocial.learn.day2.model.billing.Posting;
@@ -20,21 +22,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Инвариант двойной записи (issue #3): BillingTransaction сохраняется только при
- * дебет = кредит и одной валюте по всем проводкам.
+ * Инвариант двойной записи (issue #3): BillingTransaction сохраняется только с непустым
+ * списком проводок, оба счёта у каждой проводки, положительной суммой и одной валютой.
+ * Валидация — в сервисном слое (BillingTransactionService), по ревью PR #10.
  */
 @DataJpaTest
-@Import(BillingTransactionDAOImpl.class)
-class BillingTransactionDAOImplTest {
+@Import({ BillingTransactionService.class, BillingTransactionDAOImpl.class })
+class BillingTransactionServiceTest {
 
     @Autowired
     private TestEntityManager em;
 
     @Autowired
-    private BillingTransactionDAO billingTransactionDAO;
+    private BillingTransactionService billingTransactionService;
 
     @Test
-    void savePersistsBalancedTransaction() {
+    void savePersistsValidTransaction() {
         Currency rub = currency("RUB");
         BillingAccount bankAccount = account(rub, bank());
         BillingAccount clientAccount = account(rub, client());
@@ -42,7 +45,7 @@ class BillingTransactionDAOImplTest {
         BillingTransaction tx = transaction();
         tx.addPosting(posting(bankAccount, clientAccount, new BigDecimal("100.00")));
 
-        BillingTransaction saved = billingTransactionDAO.save(tx);
+        BillingTransaction saved = billingTransactionService.save(tx);
         em.flush();
 
         assertThat(saved.getId()).isNotNull();
@@ -56,7 +59,7 @@ class BillingTransactionDAOImplTest {
     void saveRejectsTransactionWithoutPostings() {
         BillingTransaction tx = new BillingTransaction();
 
-        assertThatThrownBy(() -> billingTransactionDAO.save(tx))
+        assertThatThrownBy(() -> billingTransactionService.save(tx))
                 .isInstanceOf(BusinessValidationException.class)
                 .hasMessageContaining("at least one posting");
     }
@@ -71,7 +74,7 @@ class BillingTransactionDAOImplTest {
         posting.setAmount(new BigDecimal("100"));
         tx.addPosting(posting);
 
-        assertThatThrownBy(() -> billingTransactionDAO.save(tx))
+        assertThatThrownBy(() -> billingTransactionService.save(tx))
                 .isInstanceOf(BusinessValidationException.class)
                 .hasMessageContaining("both debitAccount and creditAccount");
     }
@@ -83,16 +86,15 @@ class BillingTransactionDAOImplTest {
         BillingAccount clientAccount = account(rub, client());
 
         BillingTransaction txWithNull = transaction();
-        Posting postingWithNull = posting(bankAccount, clientAccount, null);
-        txWithNull.addPosting(postingWithNull);
-        assertThatThrownBy(() -> billingTransactionDAO.save(txWithNull))
+        txWithNull.addPosting(posting(bankAccount, clientAccount, null));
+        assertThatThrownBy(() -> billingTransactionService.save(txWithNull))
                 .isInstanceOf(BusinessValidationException.class)
                 .hasMessageContaining("must be positive");
 
         for (BigDecimal wrong : new BigDecimal[] { BigDecimal.ZERO, new BigDecimal("-5") }) {
             BillingTransaction tx = transaction();
             tx.addPosting(posting(bankAccount, clientAccount, wrong));
-            assertThatThrownBy(() -> billingTransactionDAO.save(tx))
+            assertThatThrownBy(() -> billingTransactionService.save(tx))
                     .isInstanceOf(BusinessValidationException.class)
                     .hasMessageContaining("must be positive");
         }
@@ -106,7 +108,7 @@ class BillingTransactionDAOImplTest {
         BillingTransaction tx = transaction();
         tx.addPosting(posting(rubAccount, usdAccount, new BigDecimal("100")));
 
-        assertThatThrownBy(() -> billingTransactionDAO.save(tx))
+        assertThatThrownBy(() -> billingTransactionService.save(tx))
                 .isInstanceOf(BusinessValidationException.class)
                 .hasMessageContaining("one currency");
     }
@@ -124,20 +126,20 @@ class BillingTransactionDAOImplTest {
         tx.addPosting(posting(rubBankAccount, rubClientAccount, new BigDecimal("100")));
         tx.addPosting(posting(usdBankAccount, usdClientAccount, new BigDecimal("200")));
 
-        assertThatThrownBy(() -> billingTransactionDAO.save(tx))
+        assertThatThrownBy(() -> billingTransactionService.save(tx))
                 .isInstanceOf(BusinessValidationException.class)
                 .hasMessageContaining("one currency");
     }
 
     @Test
-    void nothingPersistedWhenInvariantViolated() {
+    void nothingPersistedWhenValidationFails() {
         BillingAccount rubAccount = account(currency("RUB"), bank());
         BillingAccount usdAccount = account(currency("USD"), client());
 
         BillingTransaction tx = transaction();
         tx.addPosting(posting(rubAccount, usdAccount, new BigDecimal("100")));
 
-        assertThatThrownBy(() -> billingTransactionDAO.save(tx))
+        assertThatThrownBy(() -> billingTransactionService.save(tx))
                 .isInstanceOf(BusinessValidationException.class);
 
         em.flush();
@@ -187,7 +189,7 @@ class BillingTransactionDAOImplTest {
         return em.persist(client);
     }
 
-    private BillingAccount account(Currency currency, ru.asocial.learn.day2.model.Party party) {
+    private BillingAccount account(Currency currency, Party party) {
         BillingAccount account = new BillingAccount();
         account.setAccountNumber("ACC-" + System.nanoTime());
         account.setCurrency(currency);

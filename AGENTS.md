@@ -79,9 +79,10 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | `controller` | `BusinessOperationController` | `POST /business-operation` |
 | `service` | `CurrencyService`, `ClientService`, `BankService` | Бизнес-логика + границы транзакций (`@Transactional`), бросают `ResourceNotFoundException` |
 | `service` | `BusinessOperationService` | Создание + диспатч операций в одной транзакции |
+| `service` | `BillingTransactionService` | Сохранение биллинг-транзакций с проверкой инварианта двойной записи (см. ниже) |
 | `service` | `DepositService` (реализован), `TransferService`, `CardPaymentService`, `CashWithdrawalService` (TODO) | Процессоры операций |
 | `dao` | `CurrencyDao`, `ClientDao`, `BankDao`, `BusinessOperationDAO` (+ Impl) | Доступ к данным на **чистом JPA** (`@PersistenceContext EntityManager`), без Spring Data; JPQL в Impl |
-| `dao/billing` | `BillingTransactionDAO` / `Impl` | Доступ к биллинг-транзакциям; `save` проверяет инвариант двойной записи (дебет = кредит, одна валюта, положительные суммы) и только потом persist |
+| `dao/billing` | `BillingTransactionDAO` / `Impl` | Доступ к биллинг-транзакциям: `save` (persist), без бизнес-проверок |
 | `dao/billing` | `PostingDAO` / `Impl` | Баланс счёта из проводок: `getAccountBalance(accountId)` = Σcredit − Σdebit (JPQL-агрегаты) |
 | `mapper` | `CurrencyMapper`, `ClientMapper`, `BillingAccountMapper`, `BusinessOperationMapper`, `BillingTransactionMapper`, `CurrencyRateMapper` | Сущность → DTO |
 | `handler` | `ExceptionHandler` | `@ControllerAdvice` (extends `ResponseEntityExceptionHandler`): `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422, `UnsupportedOperationException` → 501, тело `ErrorResponse` |
@@ -120,9 +121,9 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 
 - **Сборка зелёная** (`mvn clean package`, проверено 2026-09-30). Ранее не компилировалась и содержала баги — все уже исправлены в коде: `BusinessOperationService.createAndProcess` возвращает DTO через `BusinessOperationMapper`; `amount` копируется из DTO; `BusinessOperationDAOImpl` — `@Repository` + `implements BusinessOperationDAO`; у `Posting` есть `@Id`; поле `accounts` живёт только в `Party` (у `Client` дублирующего поля нет).
 - **TODO-заглушки**: `TransferService` / `CardPaymentService` / `CashWithdrawalService` (бросают `UnsupportedOperationException("Not implemented yet")`), `ClientService.findClientByExtId` (`return null`), `CreateBillingTransactionDTO` (пустой).
-- **Инвариант двойной записи** (issue #3) живёт в `BillingTransactionDAOImpl.save`: непрошедшая валидацию транзакция не сохраняется (`BusinessValidationException`). Баланс — производное от проводок (`PostingDAO.getAccountBalance`), хранимого поля нет.
+- **Инвариант двойной записи** (issue #3) живёт в `BillingTransactionService.save` (сервисный слой, по итогам ревью PR #10): непустые проводки, оба счёта у каждой, положительная сумма, одна валюта; непрошедшая валидацию транзакция не сохраняется (`BusinessValidationException`). Структура `Posting` (одна сумма + обязательные дебет и кредит) сама обеспечивает Σдебет = Σкредит, отдельное сравнение сумм не нужно. Баланс — производное от проводок (`PostingDAO.getAccountBalance`), хранимого поля нет.
 - **Kafka**: адрес брокера `localhost:9092` зашит в `KafkaConfig`; без запущенного брокера консьюмеры бесконечно пытаются соединиться — приложение при этом стартует, но топики не работают. `auto.offset.reset=earliest`, так что при появлении брокера консьюмер прочитает сообщения с начала.
 - **Trailing slash не матчится**: в Spring Framework 6+ `/api/currencies/` не совпадает с маппингом `/api/currencies` — запрос уходит в статические ресурсы (`NoResourceFoundException: No static resource api/currencies`). Запрашивать без слэша или добавить `{"" , "/"}` в маппинг.
 - `data/` (живая файловая БД H2: `day2db.mv.db`, `day2db.trace.db`, `diagdb.mv.db`) по-прежнему не добавлена в `.gitignore`; сам `.gitignore`, `.gitattributes`, `.mvn/`, `mvnw*`, `jmeter/` пока не закоммичены (untracked).
 - `.github/modernize/java-upgrade/` — служебные hook-скрипты (Copilot java-upgrade), к приложению отношения не имеют.
-- Тесты: JPA-слайс (`@DataJpaTest`) на чистом H2 in-memory — `BillingTransactionDAOImplTest` (инвариант) и `PostingDAOImplTest` (баланс). Веб-слой и Kafka в тестах не поднимаются.
+- Тесты: JPA-слайс (`@DataJpaTest`) на чистом H2 in-memory — `BillingTransactionServiceTest` (инвариант, сервисный слой) и `PostingDAOImplTest` (баланс). Веб-слой и Kafka в тестах не поднимаются.

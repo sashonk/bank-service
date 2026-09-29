@@ -12,6 +12,7 @@ import ru.asocial.learn.day2.model.Party;
 import ru.asocial.learn.day2.model.billing.BillingAccount;
 import ru.asocial.learn.day2.model.billing.BillingTransaction;
 import ru.asocial.learn.day2.model.billing.Posting;
+import ru.asocial.learn.day2.service.BillingTransactionService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -20,10 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Баланс счёта из проводок (issue #3): сумма credit − сумма debit.
- * Проводки создаются через BillingTransactionDAO.save — как в боевом коде.
+ * Проводки создаются через BillingTransactionService.save — как в боевом коде.
  */
 @DataJpaTest
-@Import({ PostingDAOImpl.class, BillingTransactionDAOImpl.class })
+@Import({ PostingDAOImpl.class, BillingTransactionService.class, BillingTransactionDAOImpl.class })
 class PostingDAOImplTest {
 
     @Autowired
@@ -33,7 +34,7 @@ class PostingDAOImplTest {
     private PostingDAO postingDAO;
 
     @Autowired
-    private BillingTransactionDAO billingTransactionDAO;
+    private BillingTransactionService billingTransactionService;
 
     @Test
     void balanceIsZeroForAccountWithoutPostings() {
@@ -77,7 +78,7 @@ class PostingDAOImplTest {
         tx.setDateTimeCreated(Instant.now());
         tx.setDescription("test");
         tx.addPosting(posting);
-        billingTransactionDAO.save(tx);
+        billingTransactionService.save(tx);
     }
 
     private Posting posting(BillingAccount debit, BillingAccount credit, BigDecimal amount) {

@@ -2,7 +2,6 @@ package ru.asocial.learn.day2.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.asocial.learn.day2.dao.billing.BillingTransactionDAO;
 import ru.asocial.learn.day2.exception.BusinessOperationException;
 import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.BusinessOperation;
@@ -20,7 +19,7 @@ public class DepositService {
     private BankService bankService;
 
     @Autowired
-    private BillingTransactionDAO billingTransactionDAO;
+    private BillingTransactionService billingTransactionService;
 
     public void processDeposit(BusinessOperation businessOperation) {
         Bank bank = bankService.findBankByCode(BankService.BankCode.BANK_OF_MOSCOW);
@@ -45,7 +44,7 @@ public class DepositService {
         billingTransaction.addPosting(posting);
         billingTransaction.setDateTimeCreated(Instant.now());
         billingTransaction.setDescription(String.format("Client %s deposit %s%s", client.getLastName(), posting.getAmount().toString(), clientAccount.getCurrency().getCode()));
-        billingTransactionDAO.save(billingTransaction);
+        billingTransactionService.save(billingTransaction);
     }
 
 }
