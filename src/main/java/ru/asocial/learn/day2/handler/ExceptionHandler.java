@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import ru.asocial.learn.day2.dto.ErrorResponse;
+import ru.asocial.learn.day2.exception.BusinessOperationException;
+import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.exception.DuplicateResourceException;
 import ru.asocial.learn.day2.exception.ResourceNotFoundException;
 
@@ -21,6 +23,18 @@ public class ExceptionHandler  extends ResponseEntityExceptionHandler {
     @org.springframework.web.bind.annotation.ExceptionHandler
     public ResponseEntity<ErrorResponse> handleDuplicateResource(DuplicateResourceException duplicateResourceException) {
         ErrorResponse response = new ErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT.value(), StringUtils.firstNonBlank(duplicateResourceException.getMessage(), HttpStatus.NOT_FOUND.getReasonPhrase()));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT.value()).body(response);
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleBusinessValidation(BusinessValidationException businessValidationException) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT.value(), StringUtils.firstNonBlank(businessValidationException.getMessage(), HttpStatus.UNPROCESSABLE_CONTENT.getReasonPhrase()));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT.value()).body(response);
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler
+    public ResponseEntity<ErrorResponse> handleBusinessOperation(BusinessOperationException businessOperationException) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT.value(), StringUtils.firstNonBlank(businessOperationException.getMessage(), HttpStatus.UNPROCESSABLE_CONTENT.getReasonPhrase()));
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT.value()).body(response);
     }
 
