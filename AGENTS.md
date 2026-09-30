@@ -64,6 +64,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 - `BillingAccountMapper` — `BillingAccount` → `BillingAccountDTO`;
 - `BusinessOperationMapper` — `BusinessOperation` → `BusinessOperationDTO` (client/client2 → clientId/clientId2, enum → строка);
 - `BillingTransactionMapper.map(transaction, mapPostings)` — проводки включаются флагом (по аналогии со счетами клиента);
+- `AccountHistoryMapper.map(posting, accountId)` — проводка → запись истории по счёту: счёт в кредите = +, в дебете = − (issue #6);
 - `CurrencyRateMapper` — `CurrencyRate` → `CurrencyRateDTO` (валюты — вложенные `CurrencyDto` через `CurrencyMapper`).
 
 ### Слои и их роль
@@ -79,11 +80,13 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | `controller` | `BusinessOperationController` | `POST /business-operation` |
 | `service` | `CurrencyService`, `ClientService`, `BankService` | Бизнес-логика + границы транзакций (`@Transactional`), бросают `ResourceNotFoundException` |
 | `service` | `BusinessOperationService` | Создание + диспатч операций в одной транзакции |
+| `service` | `AccountHistoryService` | История транзакций по счёту клиента: проверка клиента и владения счётом, транзакции с проводками по счёту (issue #6) |
 | `service` | `BillingTransactionService` | Сохранение биллинг-транзакций с проверкой инварианта двойной записи (см. ниже) |
 | `service` | `DepositService` (реализован), `TransferService`, `CardPaymentService`, `CashWithdrawalService` (TODO) | Процессоры операций |
 | `dao` | `CurrencyDao`, `ClientDao`, `BankDao`, `BusinessOperationDAO` (+ Impl) | Доступ к данным на **чистом JPA** (`@PersistenceContext EntityManager`), без Spring Data; JPQL в Impl |
 | `dao/billing` | `BillingTransactionDAO` / `Impl` | Доступ к биллинг-транзакциям: `save` (persist), без бизнес-проверок |
-| `dao/billing` | `PostingDAO` / `Impl` | Баланс счёта из проводок: `getAccountBalance(accountId)` = Σcredit − Σdebit (JPQL-агрегаты) |
+| `dao/billing` | `PostingDAO` / `Impl` | `getAccountBalance(accountId)` = Σcredit − Σdebit (JPQL-агрегаты); `findByAccount(accountId)` — проводки счёта с `join fetch` транзакции, новые сверху |
+| `dao/billing` | `BillingAccountDAO` / `Impl` | `getById` биллинг-счёта |
 | `mapper` | `CurrencyMapper`, `ClientMapper`, `BillingAccountMapper`, `BusinessOperationMapper`, `BillingTransactionMapper`, `CurrencyRateMapper` | Сущность → DTO |
 | `handler` | `ExceptionHandler` | `@ControllerAdvice` (extends `ResponseEntityExceptionHandler`): `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422, `UnsupportedOperationException` → 501, тело `ErrorResponse` |
 | `exception` | `ResourceNotFoundException`, `DuplicateResourceException` | Runtime-исключения |
@@ -100,6 +103,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | DELETE | `/api/currencies/{id}` | Удалить → 204 (404, если нет) |
 | POST | `/api/clients` | Создать клиента (со счетами), тело `CreateClientDTO` → 201 + Location |
 | GET | `/api/clients/{id}` | Получить клиента со счетами и балансами (404, если нет) |
+| GET | `/api/clients/{clientId}/accounts/{accountId}/transactions` | История по счёту: записи `{dateTime, amount (со знаком), currency, description}`, новые сверху; пустая история → 200 `[]`; нет клиента/счёта или чужой счёт → 404 |
 | POST | `/api/business-operation` | Тело `CreateBusinessOperationDTO {operationType, amount, clientId, clientId2?, accountNumber, accountNumber2?}` → 201 |
 
 Ошибки: `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422 (`UNPROCESSABLE_CONTENT`), `BusinessValidationException` / `BusinessOperationException` → 422, `UnsupportedOperationException` → 501 (`NOT_IMPLEMENTED`, так отвечают TODO-процессоры операций); тело — `ErrorResponse`. В `BillingAccountDTO` появилось поле `balance` (баланс из проводок, заполняется в `ClientService` после маппинга через `PostingDAO`).
@@ -126,4 +130,4 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 - **Trailing slash не матчится**: в Spring Framework 6+ `/api/currencies/` не совпадает с маппингом `/api/currencies` — запрос уходит в статические ресурсы (`NoResourceFoundException: No static resource api/currencies`). Запрашивать без слэша или добавить `{"" , "/"}` в маппинг.
 - `data/` (живая файловая БД H2: `day2db.mv.db`, `day2db.trace.db`, `diagdb.mv.db`) по-прежнему не добавлена в `.gitignore`; сам `.gitignore`, `.gitattributes`, `.mvn/`, `mvnw*`, `jmeter/` пока не закоммичены (untracked).
 - `.github/modernize/java-upgrade/` — служебные hook-скрипты (Copilot java-upgrade), к приложению отношения не имеют.
-- Тесты: JPA-слайс (`@DataJpaTest`) на чистом H2 in-memory — `BillingTransactionServiceTest` (инвариант, сервисный слой) и `PostingDAOImplTest` (баланс). Веб-слой и Kafka в тестах не поднимаются.
+- Тесты: JPA-слайс (`@DataJpaTest`) на чистом H2 in-memory — `BillingTransactionServiceTest` (инвариант, сервисный слой), `PostingDAOImplTest` (баланс) и `AccountHistoryServiceTest` (история: знак, порядок, владение счётом). Веб-слой и Kafka в тестах не поднимаются.

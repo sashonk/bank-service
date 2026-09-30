@@ -10,8 +10,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.asocial.learn.day2.dto.ClientDTO;
 import ru.asocial.learn.day2.dto.CreateClientDTO;
+import ru.asocial.learn.day2.dto.billing.AccountHistoryEntryDTO;
+import ru.asocial.learn.day2.service.AccountHistoryService;
 import ru.asocial.learn.day2.service.ClientService;
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping(value = "/clients")
@@ -19,6 +22,9 @@ public class ClientController {
 
         @Autowired
         private ClientService clientService;
+
+        @Autowired
+        private AccountHistoryService accountHistoryService;
 
         @PostMapping
         public ResponseEntity<ClientDTO> createClient(@RequestBody CreateClientDTO createClientDTO) {
@@ -30,5 +36,10 @@ public class ClientController {
         public ResponseEntity<ClientDTO> getById(@PathVariable Long id) {
             ClientDTO clientDTO = clientService.getClientWithAccountsById(id);
             return ResponseEntity.ok(clientDTO);
+        }
+
+        @GetMapping(value = "/{clientId}/accounts/{accountId}/transactions")
+        public ResponseEntity<List<AccountHistoryEntryDTO>> getAccountHistory(@PathVariable Long clientId, @PathVariable Long accountId) {
+            return ResponseEntity.ok(accountHistoryService.getAccountHistory(clientId, accountId));
         }
 }
