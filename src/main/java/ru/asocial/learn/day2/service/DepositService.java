@@ -32,7 +32,7 @@ public class DepositService {
 
         BillingAccount bankAccount = bank.getAccounts()
                 .stream()
-                .filter(b -> b.getCurrency().getCode().equals(clientAccount.getCurrency().getCode()))
+                .filter(b -> b.getType() == BillingAccount.AccountType.CASH_DESK && b.getCurrency().getCode().equals(clientAccount.getCurrency().getCode()))
                 .findAny()
                 .orElseThrow(() -> new BusinessOperationException("Bank account not found for currency: " + clientAccount.getCurrency().getCode()));
 

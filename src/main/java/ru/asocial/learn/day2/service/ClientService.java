@@ -88,6 +88,7 @@ public class ClientService {
                 BillingAccount billingAccount = new BillingAccount();
                 billingAccount.setAccountNumber(billingAccountDTO.getAccountNumber());
                 billingAccount.setParty(client);
+                billingAccount.setType(BillingAccount.AccountType.CLIENT);
                 Currency currency = null;
                 if (billingAccountDTO.getCurrencyId() == null && billingAccountDTO.getCurrencyCode() == null) {
                     throw new BusinessValidationException("At least one of the fields must not be null: billingAccountDTO.currencyId, billingAccountDTO.currencyCode");

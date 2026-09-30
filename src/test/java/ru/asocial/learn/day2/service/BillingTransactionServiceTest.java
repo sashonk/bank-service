@@ -6,6 +6,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import ru.asocial.learn.day2.dao.billing.BillingTransactionDAOImpl;
+import ru.asocial.learn.day2.dao.billing.PostingDAOImpl;
 import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.Client;
@@ -27,8 +28,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Валидация — в сервисном слое (BillingTransactionService), по ревью PR #10.
  */
 @DataJpaTest
-@Import({ BillingTransactionService.class, BillingTransactionDAOImpl.class })
-class BillingTransactionServiceTest {
+@Import({ BillingTransactionService.class, BillingTransactionDAOImpl.class, PostingDAOImpl.class })
+class BillingTransactionServiceTest extends TestBase{
 
     @Autowired
     private TestEntityManager em;
@@ -39,8 +40,8 @@ class BillingTransactionServiceTest {
     @Test
     void savePersistsValidTransaction() {
         Currency rub = currency("RUB");
-        BillingAccount bankAccount = account(rub, bank());
-        BillingAccount clientAccount = account(rub, client());
+        BillingAccount bankAccount = account(rub, bank(), BillingAccount.AccountType.CASH_DESK);
+        BillingAccount clientAccount = account(rub, client(), BillingAccount.AccountType.CLIENT);
 
         BillingTransaction tx = transaction();
         tx.addPosting(posting(bankAccount, clientAccount, new BigDecimal("100.00")));
@@ -66,7 +67,7 @@ class BillingTransactionServiceTest {
 
     @Test
     void saveRejectsPostingWithoutCreditAccount() {
-        BillingAccount bankAccount = account(currency("RUB"), bank());
+        BillingAccount bankAccount = account(currency("RUB"), bank(), BillingAccount.AccountType.CASH_DESK);
 
         BillingTransaction tx = transaction();
         Posting posting = new Posting();
@@ -82,8 +83,8 @@ class BillingTransactionServiceTest {
     @Test
     void saveRejectsNonPositiveAmount() {
         Currency rub = currency("RUB");
-        BillingAccount bankAccount = account(rub, bank());
-        BillingAccount clientAccount = account(rub, client());
+        BillingAccount bankAccount = account(rub, bank(), BillingAccount.AccountType.CASH_DESK);
+        BillingAccount clientAccount = account(rub, client(), BillingAccount.AccountType.CLIENT);
 
         BillingTransaction txWithNull = transaction();
         txWithNull.addPosting(posting(bankAccount, clientAccount, null));
@@ -102,8 +103,8 @@ class BillingTransactionServiceTest {
 
     @Test
     void saveRejectsPostingWithDifferentCurrenciesOnSides() {
-        BillingAccount rubAccount = account(currency("RUB"), bank());
-        BillingAccount usdAccount = account(currency("USD"), client());
+        BillingAccount rubAccount = account(currency("RUB"), bank(), BillingAccount.AccountType.CASH_DESK);
+        BillingAccount usdAccount = account(currency("USD"), client(), BillingAccount.AccountType.CLIENT);
 
         BillingTransaction tx = transaction();
         tx.addPosting(posting(rubAccount, usdAccount, new BigDecimal("100")));
@@ -117,10 +118,10 @@ class BillingTransactionServiceTest {
     void saveRejectsPostingsInDifferentCurrencies() {
         Currency rub = currency("RUB");
         Currency usd = currency("USD");
-        BillingAccount rubBankAccount = account(rub, bank());
-        BillingAccount rubClientAccount = account(rub, client());
-        BillingAccount usdBankAccount = account(usd, bank());
-        BillingAccount usdClientAccount = account(usd, client());
+        BillingAccount rubBankAccount = account(rub, bank(), BillingAccount.AccountType.CASH_DESK);
+        BillingAccount rubClientAccount = account(rub, client(), BillingAccount.AccountType.CLIENT);
+        BillingAccount usdBankAccount = account(usd, bank(), BillingAccount.AccountType.CASH_DESK);
+        BillingAccount usdClientAccount = account(usd, client(), BillingAccount.AccountType.CLIENT);
 
         BillingTransaction tx = transaction();
         tx.addPosting(posting(rubBankAccount, rubClientAccount, new BigDecimal("100")));
@@ -133,8 +134,8 @@ class BillingTransactionServiceTest {
 
     @Test
     void nothingPersistedWhenValidationFails() {
-        BillingAccount rubAccount = account(currency("RUB"), bank());
-        BillingAccount usdAccount = account(currency("USD"), client());
+        BillingAccount rubAccount = account(currency("RUB"), bank(), BillingAccount.AccountType.CASH_DESK);
+        BillingAccount usdAccount = account(currency("USD"), client(), BillingAccount.AccountType.CLIENT);
 
         BillingTransaction tx = transaction();
         tx.addPosting(posting(rubAccount, usdAccount, new BigDecimal("100")));
@@ -153,33 +154,12 @@ class BillingTransactionServiceTest {
         assertThat(transactionCount).isZero();
     }
 
-    private BillingTransaction transaction() {
-        BillingTransaction tx = new BillingTransaction();
-        tx.setDateTimeCreated(Instant.now());
-        tx.setDescription("test");
-        return tx;
-    }
-
     private Posting posting(BillingAccount debit, BillingAccount credit, BigDecimal amount) {
         Posting posting = new Posting();
         posting.setDebitAccount(debit);
         posting.setCreditAccount(credit);
         posting.setAmount(amount);
         return posting;
-    }
-
-    private Currency currency(String code) {
-        Currency currency = new Currency();
-        currency.setCode(code);
-        currency.setName(code + " test");
-        return em.persist(currency);
-    }
-
-    private Bank bank() {
-        Bank bank = new Bank();
-        bank.setCode("044525219");
-        bank.setName("test bank");
-        return em.persist(bank);
     }
 
     private Client client() {
@@ -189,11 +169,4 @@ class BillingTransactionServiceTest {
         return em.persist(client);
     }
 
-    private BillingAccount account(Currency currency, Party party) {
-        BillingAccount account = new BillingAccount();
-        account.setAccountNumber("ACC-" + System.nanoTime());
-        account.setCurrency(currency);
-        account.setParty(party);
-        return em.persist(account);
-    }
 }
