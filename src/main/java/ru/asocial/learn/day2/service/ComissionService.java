@@ -7,6 +7,7 @@ import org.springframework.util.Assert;
 import ru.asocial.learn.day2.dao.ComissionDAO;
 import ru.asocial.learn.day2.dto.CommissionDTO;
 import ru.asocial.learn.day2.dto.CreateCommissionDTO;
+import ru.asocial.learn.day2.dto.UpdateCommissionDTO;
 import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.exception.DuplicateResourceException;
 import ru.asocial.learn.day2.exception.ResourceNotFoundException;
@@ -49,12 +50,10 @@ public class ComissionService {
     @Transactional
     public CommissionDTO create(CreateCommissionDTO createCommissionDTO) {
         Assert.notNull(createCommissionDTO, "createCommissionDTO is null");
-        if (createCommissionDTO.getValue() == null || createCommissionDTO.getCurrencyId() == null || createCommissionDTO.getBankId() == null) {
-            throw new BusinessValidationException("Fields must not be null: value, currencyId, bankId");
+        if (createCommissionDTO.getCurrencyId() == null || createCommissionDTO.getBankId() == null) {
+            throw new BusinessValidationException("Fields must not be null: currencyId, bankId");
         }
-        if (createCommissionDTO.getValue().signum() <= 0) {
-            throw new BusinessValidationException("Commission value must be positive, value = " + createCommissionDTO.getValue());
-        }
+        validateValue(createCommissionDTO.getValue());
         Bank bank = bankService.getBankOrThrow(createCommissionDTO.getBankId());
         Currency currency = currencyService.getCurrencyOrThrow(createCommissionDTO.getCurrencyId());
         if (comissionDAO.findByBankAndCurrency(bank, currency) != null) {
@@ -66,6 +65,33 @@ public class ComissionService {
         commission.setCurrency(currency);
         comissionDAO.create(commission);
         return comissionMapper.map(commission);
+    }
+
+    /**
+     * Обновление процента тарифа. Банк и валюта не меняются — тариф задаётся
+     * на пару банк+валюта; смена пары = удаление и создание другого тарифа.
+     */
+    @Transactional
+    public CommissionDTO update(Long id, UpdateCommissionDTO updateCommissionDTO) {
+        Assert.notNull(id, "id is null");
+        Assert.notNull(updateCommissionDTO, "updateCommissionDTO is null");
+        validateValue(updateCommissionDTO.getValue());
+        Commission commission = comissionDAO.getById(id);
+        if (commission == null) {
+            throw new ResourceNotFoundException("commission not found, id = " + id);
+        }
+        commission.setValue(updateCommissionDTO.getValue());
+        comissionDAO.update(commission);
+        return comissionMapper.map(commission);
+    }
+
+    private void validateValue(BigDecimal value) {
+        if (value == null) {
+            throw new BusinessValidationException("Field must not be null: value");
+        }
+        if (value.signum() <= 0) {
+            throw new BusinessValidationException("Commission value must be positive, value = " + value);
+        }
     }
 
     public BigDecimal calculateCommission(BigDecimal amount, Currency currency, Bank bank) {

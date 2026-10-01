@@ -28,7 +28,13 @@ public class ComissionDAOImpl implements ComissionDAO {
         return entityManager.find(Commission.class, id);
     }
 
+    @Override
     public void create(Commission commission) {
         entityManager.persist(commission);
+    }
+
+    @Override
+    public Commission update(Commission commission) {
+        return entityManager.merge(commission);
     }
 }
