@@ -106,6 +106,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | POST | `/api/business-operation` | Тело `CreateBusinessOperationDTO {operationType, amount, clientId, clientId2?, accountNumber, accountNumber2?}` → 201 |
 | POST | `/api/commissions` | Создать тариф комиссии, тело `CreateCommissionDTO {value, currencyId, bankId}` → 201 + Location; null/неположительный `value` → 422, дубликат пары банк+валюта → 422 `DuplicateResourceException`, нет банка/валюты → 404 |
 | GET | `/api/commissions/{id}` | Получить тариф по id (404, если нет) |
+| PUT | `/api/commissions/{id}` | Обновить процент тарифа, тело `UpdateCommissionDTO {value}` → 200; null/неположительный `value` → 422, нет тарифа → 404; банк/валюта тарифа не меняются |
 
 Ошибки: `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422 (`UNPROCESSABLE_CONTENT`), `BusinessValidationException` / `BusinessOperationException` → 422, `UnsupportedOperationException` → 501 (`NOT_IMPLEMENTED`, так отвечают TODO-процессоры операций); тело — `ErrorResponse`. В `BillingAccountDTO` появилось поле `balance` (баланс из проводок, заполняется в `ClientService` после маппинга через `PostingDAO`).
 

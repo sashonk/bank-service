@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Import;
 import ru.asocial.learn.day2.dao.BankDAOImpl;
 import ru.asocial.learn.day2.dao.ComissionDAOImpl;
 import ru.asocial.learn.day2.dao.CurrencyDaoImpl;
+import ru.asocial.learn.day2.dto.CommissionDTO;
+import ru.asocial.learn.day2.dto.CreateCommissionDTO;
+import ru.asocial.learn.day2.dto.UpdateCommissionDTO;
+import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.mapper.ComissionMapper;
 import ru.asocial.learn.day2.mapper.CurrencyMapper;
 import ru.asocial.learn.day2.model.Bank;
@@ -19,6 +23,9 @@ import ru.asocial.learn.day2.model.billing.BillingAccount;
 import ru.asocial.learn.day2.model.billing.Posting;
 
 import java.math.BigDecimal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @Import({ ComissionService.class, ComissionDAOImpl.class, ComissionMapper.class,
@@ -43,6 +50,33 @@ public class ComissionServiceTest {
         commission.setValue(new BigDecimal("0.01"));
         em.persist(commission);
 
+    }
+
+    @Test
+    public void updateChangesTariffValue() {
+        Bank bank = bank();
+        Currency currency = currency("RUB");
+
+        CreateCommissionDTO createDTO = new CreateCommissionDTO();
+        createDTO.setValue(new BigDecimal("0.5"));
+        createDTO.setCurrencyId(currency.getId());
+        createDTO.setBankId(bank.getId());
+        CommissionDTO created = comissionService.create(createDTO);
+
+        UpdateCommissionDTO updateDTO = new UpdateCommissionDTO();
+        updateDTO.setValue(new BigDecimal("0.01"));
+        CommissionDTO updated = comissionService.update(created.getId(), updateDTO);
+
+        assertThat(updated.getValue()).isEqualByComparingTo("0.01");
+        assertThat(updated.getBankId()).isEqualTo(bank.getId());
+        assertThat(updated.getCurrencyId()).isEqualTo(currency.getId());
+        assertThat(comissionService.getById(created.getId()).getValue()).isEqualByComparingTo("0.01");
+
+        UpdateCommissionDTO badDTO = new UpdateCommissionDTO();
+        badDTO.setValue(BigDecimal.ZERO);
+        assertThatThrownBy(() -> comissionService.update(created.getId(), badDTO))
+                .isInstanceOf(BusinessValidationException.class)
+                .hasMessageContaining("must be positive");
     }
 
     private BillingAccount account(Currency currency, Party party) {

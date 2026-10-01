@@ -14,4 +14,6 @@ public interface ComissionDAO {
     Commission getById(Long id);
 
     void create(Commission commission);
+
+    Commission update(Commission commission);
 }
