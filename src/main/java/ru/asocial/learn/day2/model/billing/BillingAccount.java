@@ -2,6 +2,8 @@ package ru.asocial.learn.day2.model.billing;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,6 +30,24 @@ public class BillingAccount {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "party_id")
     private Party party;
+
+    @Column
+    @Enumerated(EnumType.STRING)
+    private AccountType type;
+
+    public enum AccountType {
+        CLIENT,
+        CASH_DESK,
+        COMMISSION;
+    }
+
+    public AccountType getType() {
+        return type;
+    }
+
+    public void setType(AccountType type) {
+        this.type = type;
+    }
 
     public Long getId() {
         return id;

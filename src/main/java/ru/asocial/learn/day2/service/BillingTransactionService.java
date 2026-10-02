@@ -5,18 +5,28 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import ru.asocial.learn.day2.dao.billing.BillingTransactionDAO;
+import ru.asocial.learn.day2.dao.billing.PostingDAO;
+import ru.asocial.learn.day2.exception.BusinessOperationException;
 import ru.asocial.learn.day2.exception.BusinessValidationException;
+import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.billing.BillingAccount;
 import ru.asocial.learn.day2.model.billing.BillingTransaction;
 import ru.asocial.learn.day2.model.billing.Posting;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BillingTransactionService {
 
     @Autowired
     private BillingTransactionDAO billingTransactionDAO;
+
+    @Autowired
+    private PostingDAO postingDAO;
 
     @Transactional
     public BillingTransaction save(BillingTransaction billingTransaction) {
@@ -37,6 +47,8 @@ public class BillingTransactionService {
         }
 
         String transactionCurrency = null;
+        Map<String, BillingAccount> debitClientAccounts = new HashMap<>();
+        Map<String, BigDecimal> debitClientAmounts = new HashMap<>();
         for (Posting posting : postings) {
             BillingAccount debitAccount = posting.getDebitAccount();
             BillingAccount creditAccount = posting.getCreditAccount();
@@ -45,6 +57,11 @@ public class BillingTransactionService {
             }
             if (posting.getAmount() == null || posting.getAmount().signum() <= 0) {
                 throw new BusinessValidationException("Posting amount must be positive, got: " + posting.getAmount());
+            }
+
+            if (debitAccount.getType() == BillingAccount.AccountType.CLIENT) {
+                debitClientAccounts.put(debitAccount.getAccountNumber(), debitAccount);
+                debitClientAmounts.compute(debitAccount.getAccountNumber(), (k, v) -> v == null ? posting.getAmount() : v.add(posting.getAmount()));
             }
 
             String debitCurrency = debitAccount.getCurrency() != null ? debitAccount.getCurrency().getCode() : null;
@@ -61,6 +78,14 @@ public class BillingTransactionService {
                 throw new BusinessValidationException(String.format(
                         "All postings of a BillingTransaction must be in one currency, expected %s, got %s",
                         transactionCurrency, debitCurrency));
+            }
+        }
+
+        for (Map.Entry<String, BillingAccount> entry : debitClientAccounts.entrySet()) {
+            BigDecimal debit = debitClientAmounts.get(entry.getKey());
+            BigDecimal balance = postingDAO.getAccountBalance(entry.getValue().getId());
+            if (balance.subtract(debit).compareTo(BigDecimal.ZERO) < 0) {
+                throw new BusinessOperationException("Insufficient funds on the debit account");
             }
         }
     }
