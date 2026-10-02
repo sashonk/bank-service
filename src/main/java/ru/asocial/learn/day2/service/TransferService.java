@@ -27,7 +27,7 @@ public class TransferService {
     private BillingTransactionService billingTransactionService;
 
     @Autowired
-    private ComissionService comissionService;
+    private CommissionService CommissionService;
 
     @Autowired
     private PostingDAO postingDAO;
@@ -56,7 +56,7 @@ public class TransferService {
             throw new BusinessOperationException(String.format("Can not transfer from %s account to %s account", curCode1, curCode2));
         }
 
-        BigDecimal commission = isOwnAccountTransfer ? BigDecimal.ZERO : comissionService.calculateCommission(businessOperation.getAmount(), clientAccount.getCurrency(), bank);
+        BigDecimal commission = isOwnAccountTransfer ? BigDecimal.ZERO : CommissionService.calculateCommission(businessOperation.getAmount(), clientAccount.getCurrency(), bank);
         BillingTransaction billingTransaction = new BillingTransaction();
         Posting posting = new Posting();
         posting.setCreditAccount(client2Account);
@@ -77,7 +77,7 @@ public class TransferService {
         }
 
         billingTransaction.setDateTimeCreated(Instant.now());
-        billingTransaction.setDescription(String.format("Client %s transfer %s%s to client %s", client.getLastName(), posting.getAmount().toString(), curCode1, client2.getLastName()));
+        billingTransaction.setDescription("Transfer " + curCode1);
         billingTransactionService.save(billingTransaction);
     }
 

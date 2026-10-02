@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.asocial.learn.day2.dto.CommissionDTO;
 import ru.asocial.learn.day2.dto.CreateCommissionDTO;
 import ru.asocial.learn.day2.dto.UpdateCommissionDTO;
-import ru.asocial.learn.day2.service.ComissionService;
+import ru.asocial.learn.day2.service.CommissionService;
 
 import java.net.URI;
 
@@ -21,23 +21,23 @@ import java.net.URI;
 public class CommissionController {
 
     @Autowired
-    private ComissionService comissionService;
+    private CommissionService CommissionService;
 
     @PostMapping
     public ResponseEntity<CommissionDTO> createCommission(@RequestBody CreateCommissionDTO createCommissionDTO) {
-        CommissionDTO commissionDTO = comissionService.create(createCommissionDTO);
+        CommissionDTO commissionDTO = CommissionService.create(createCommissionDTO);
         return ResponseEntity.created(URI.create("/api/commissions/" + commissionDTO.getId())).body(commissionDTO);
     }
 
     @GetMapping(value = "/{id}")
     public ResponseEntity<CommissionDTO> getById(@PathVariable Long id) {
-        CommissionDTO commissionDTO = comissionService.getById(id);
+        CommissionDTO commissionDTO = CommissionService.getById(id);
         return ResponseEntity.ok(commissionDTO);
     }
 
     @PutMapping(value = "/{id}")
     public ResponseEntity<CommissionDTO> update(@PathVariable Long id, @RequestBody UpdateCommissionDTO updateCommissionDTO) {
-        CommissionDTO commissionDTO = comissionService.update(id, updateCommissionDTO);
+        CommissionDTO commissionDTO = CommissionService.update(id, updateCommissionDTO);
         return ResponseEntity.ok(commissionDTO);
     }
 }

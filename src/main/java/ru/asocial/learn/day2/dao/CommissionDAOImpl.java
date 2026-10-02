@@ -8,19 +8,21 @@ import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.Commission;
 import ru.asocial.learn.day2.model.Currency;
 
+import java.util.List;
+
 @Repository
-public class ComissionDAOImpl implements ComissionDAO {
+public class CommissionDAOImpl implements CommissionDAO {
 
     @PersistenceContext
     private EntityManager entityManager;
 
     @Override
-    public Commission findByBankAndCurrency(Bank bank, Currency currency) {
+    public List<Commission> findByBankAndCurrency(Bank bank, Currency currency) {
         TypedQuery<Commission> query = entityManager.createQuery("select c from Commission c where c.bank = :bank and c.currency = :currency", Commission.class);
-        query.setMaxResults(1);
+        //query.setMaxResults(100);
         query.setParameter("currency", currency);
         query.setParameter("bank", bank);
-        return query.getSingleResultOrNull();
+        return query.getResultList();
     }
 
     @Override

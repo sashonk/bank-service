@@ -406,7 +406,7 @@
                   <boolProp name="HTTPArgument.always_encode">false</boolProp>
                   <stringProp name="Argument.value">{&#xd;
   &quot;value&quot;: 0.01,&#xd;
-  &quot;currencyId&quot;: 3432,&#xd;
+  &quot;currencyId&quot;: 3431,&#xd;
   &quot;bankId&quot;: 57&#xd;
 }</stringProp>
                   <stringProp name="Argument.metadata">=</stringProp>

@@ -5,7 +5,7 @@ import ru.asocial.learn.day2.dto.CommissionDTO;
 import ru.asocial.learn.day2.model.Commission;
 
 @Component
-public class ComissionMapper {
+public class CommissionMapper {
 
     public CommissionDTO map(Commission entity) {
         CommissionDTO dto = new CommissionDTO();

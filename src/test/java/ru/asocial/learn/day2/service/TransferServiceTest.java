@@ -5,14 +5,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import ru.asocial.learn.day2.dao.BankDAOImpl;
-import ru.asocial.learn.day2.dao.ComissionDAOImpl;
+import ru.asocial.learn.day2.dao.CommissionDAOImpl;
 import ru.asocial.learn.day2.dao.CurrencyDaoImpl;
 import ru.asocial.learn.day2.dao.billing.BillingTransactionDAOImpl;
 import ru.asocial.learn.day2.dao.billing.PostingDAO;
 import ru.asocial.learn.day2.dao.billing.PostingDAOImpl;
 import ru.asocial.learn.day2.dto.CreateCommissionDTO;
 import ru.asocial.learn.day2.exception.BusinessOperationException;
-import ru.asocial.learn.day2.mapper.ComissionMapper;
+import ru.asocial.learn.day2.mapper.CommissionMapper;
 import ru.asocial.learn.day2.mapper.CurrencyMapper;
 import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.BusinessOperation;
@@ -29,8 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import({CurrencyService.class, CurrencyMapper.class, CurrencyDaoImpl.class, ComissionService.class,
-        ComissionDAOImpl.class, ComissionMapper.class, BankService.class, BankDAOImpl.class,
+@Import({CurrencyService.class, CurrencyMapper.class, CurrencyDaoImpl.class, CommissionService.class,
+        CommissionDAOImpl.class, CommissionMapper.class, BankService.class, BankDAOImpl.class,
         TransferService.class, BillingTransactionService.class, BillingTransactionDAOImpl.class, PostingDAOImpl.class })
 public class TransferServiceTest extends TestBase {
 
@@ -38,7 +38,7 @@ public class TransferServiceTest extends TestBase {
     private TransferService transferService;
 
     @Autowired
-    private ComissionService comissionService;
+    private CommissionService CommissionService;
 
     @Autowired
     private PostingDAO postingDAO;
@@ -125,7 +125,7 @@ public class TransferServiceTest extends TestBase {
         createCommissionDTO.setBankId(bank.getId());
         createCommissionDTO.setCurrencyId(currency.getId());
         createCommissionDTO.setValue(new BigDecimal("0.015"));
-        comissionService.create(createCommissionDTO);
+        CommissionService.create(createCommissionDTO);
 
         BusinessOperation businessOperation = new BusinessOperation();
         businessOperation.setClient(client);

@@ -49,7 +49,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 - `model/Party` — абстрактный участник отношений (`@Entity` + `@Inheritance(JOINED)`): id и список биллинг-счетов (`addAccount`/`removeAccount`). Подклассы: `model/Client` (клиент: firstName/lastName/externalId) и `model/Bank` (банк: name, code/БИК). Счёт `model/billing/BillingAccount` (accountNumber + валюта + `type`) ссылается на `Party` (`@ManyToOne`, колонка `party_id`); `AccountType` — enum `CLIENT`/`CASH_DESK`/`COMMISSION`, маппинг `@Enumerated(EnumType.STRING)` — в БД строки 'CLIENT'/'CASH_DESK'/'COMMISSION' (такие же литералы использует `sql/bank.sql`).
 - `model/billing/BillingTransaction` + `model/billing/Posting` — заготовка двойной записи: транзакция состоит из проводок (debitAccount/creditAccount/amount).
 - `model/BusinessOperation` — операция: тип (enum), amount, client/client2 (`@ManyToOne` LAZY), accountNumber/accountNumber2.
-- `model/Commission` — тариф комиссии: процент `value` для пары банк+валюта (`@ManyToOne` EAGER на `Currency` и `Bank`). Колонка в БД — `commission_value`: `value` — зарезервированное слово H2, непоименованная колонка ломала DDL. `ComissionDAO.findByBankAndCurrency` + `getById` (JPQL/find), `ComissionService` — `create`/`getById` (REST, тариф один на пару банк+валюта — дубликат → 422) и `calculateCommission` (процент от суммы; тариф не задан → `BigDecimal.ZERO`). История комиссий за перевод в разработке.
+- `model/Commission` — тариф комиссии: процент `value` для пары банк+валюта (`@ManyToOne` EAGER на `Currency` и `Bank`). Колонка в БД — `commission_value`: `value` — зарезервированное слово H2, непоименованная колонка ломала DDL. `CommissionDAO.findByBankAndCurrency` + `getById` (JPQL/find), `CommissionService` — `create`/`getById` (REST, тариф один на пару банк+валюта — дубликат → 422) и `calculateCommission` (процент от суммы; тариф не задан → `BigDecimal.ZERO`). История комиссий за перевод в разработке.
 
 ### DTO и мапперы
 
@@ -66,7 +66,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 - `BusinessOperationMapper` — `BusinessOperation` → `BusinessOperationDTO` (client/client2 → clientId/clientId2, enum → строка);
 - `BillingTransactionMapper.map(transaction, mapPostings)` — проводки включаются флагом (по аналогии со счетами клиента);
 - `CurrencyRateMapper` — `CurrencyRate` → `CurrencyRateDTO` (валюты — вложенные `CurrencyDto` через `CurrencyMapper`);
-- `ComissionMapper` — `Commission` → `CommissionDTO` (валюта → currencyId+currencyCode, банк → bankId+bankName).
+- `CommissionMapper` — `Commission` → `CommissionDTO` (валюта → currencyId+currencyCode, банк → bankId+bankName).
 
 ### Слои и их роль
 
@@ -80,14 +80,14 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | `controller` | `ClientController` | REST клиентов: `POST /clients` (создание со счетами), `GET /clients/{id}` (со счетами) |
 | `controller` | `CommissionController` | REST тарифов комиссий: `POST /commissions` (создание), `GET /commissions/{id}` |
 | `controller` | `BusinessOperationController` | `POST /business-operation` |
-| `service` | `CurrencyService`, `ClientService`, `BankService`, `ComissionService` | Бизнес-логика + границы транзакций (`@Transactional`), бросают `ResourceNotFoundException` |
+| `service` | `CurrencyService`, `ClientService`, `BankService`, `CommissionService` | Бизнес-логика + границы транзакций (`@Transactional`), бросают `ResourceNotFoundException` |
 | `service` | `BusinessOperationService` | Создание + диспатч операций в одной транзакции |
 | `service` | `BillingTransactionService` | Сохранение биллинг-транзакций с проверкой инварианта двойной записи (см. ниже) |
 | `service` | `DepositService` (реализован), `TransferService`, `CardPaymentService`, `CashWithdrawalService` (TODO) | Процессоры операций |
-| `dao` | `CurrencyDao`, `ClientDao`, `BankDao`, `BusinessOperationDAO`, `ComissionDAO` (+ Impl) | Доступ к данным на **чистом JPA** (`@PersistenceContext EntityManager`), без Spring Data; JPQL в Impl |
+| `dao` | `CurrencyDao`, `ClientDao`, `BankDao`, `BusinessOperationDAO`, `CommissionDAO` (+ Impl) | Доступ к данным на **чистом JPA** (`@PersistenceContext EntityManager`), без Spring Data; JPQL в Impl |
 | `dao/billing` | `BillingTransactionDAO` / `Impl` | Доступ к биллинг-транзакциям: `save` (persist), без бизнес-проверок |
 | `dao/billing` | `PostingDAO` / `Impl` | Баланс счёта из проводок: `getAccountBalance(accountId)` = Σcredit − Σdebit (JPQL-агрегаты) |
-| `mapper` | `CurrencyMapper`, `ClientMapper`, `BillingAccountMapper`, `BusinessOperationMapper`, `BillingTransactionMapper`, `CurrencyRateMapper`, `ComissionMapper` | Сущность → DTO |
+| `mapper` | `CurrencyMapper`, `ClientMapper`, `BillingAccountMapper`, `BusinessOperationMapper`, `BillingTransactionMapper`, `CurrencyRateMapper`, `CommissionMapper` | Сущность → DTO |
 | `handler` | `ExceptionHandler` | `@ControllerAdvice` (extends `ResponseEntityExceptionHandler`): `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422, `UnsupportedOperationException` → 501, тело `ErrorResponse` |
 | `exception` | `ResourceNotFoundException`, `DuplicateResourceException` | Runtime-исключения |
 

@@ -5,10 +5,11 @@ import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.Commission;
 import ru.asocial.learn.day2.model.Currency;
 
-public interface ComissionDAO {
+import java.util.List;
 
-    @Nullable
-    Commission findByBankAndCurrency(Bank bank, Currency currency);
+public interface CommissionDAO {
+
+    List<Commission> findByBankAndCurrency(Bank bank, Currency currency);
 
     @Nullable
     Commission getById(Long id);
