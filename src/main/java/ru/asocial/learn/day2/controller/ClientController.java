@@ -1,5 +1,6 @@
 package ru.asocial.learn.day2.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.asocial.learn.day2.dto.ClientDTO;
 import ru.asocial.learn.day2.dto.CreateClientDTO;
+import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.service.ClientService;
 import java.net.URI;
 
@@ -29,6 +31,16 @@ public class ClientController {
         @GetMapping(value = "/{id}")
         public ResponseEntity<ClientDTO> getById(@PathVariable Long id) {
             ClientDTO clientDTO = clientService.getClientWithAccountsById(id);
+            return ResponseEntity.ok(clientDTO);
+        }
+
+        @GetMapping(value = "/me")
+        public ResponseEntity<ClientDTO> getMe(HttpServletRequest request) {
+            String extId = request.getHeader("X-External-id");
+            if (extId == null) {
+                throw new BusinessValidationException("Missing required header \"X-External-id\"");
+            }
+            ClientDTO clientDTO = clientService.findClientByExtId(extId);
             return ResponseEntity.ok(clientDTO);
         }
 }

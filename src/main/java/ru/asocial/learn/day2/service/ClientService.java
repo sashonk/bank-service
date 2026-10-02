@@ -16,6 +16,7 @@ import ru.asocial.learn.day2.dto.ClientDTO;
 import ru.asocial.learn.day2.dto.CreateClientDTO;
 import ru.asocial.learn.day2.dto.billing.BillingAccountDTO;
 import ru.asocial.learn.day2.exception.BusinessValidationException;
+import ru.asocial.learn.day2.exception.IncorrectResultSizeException;
 import ru.asocial.learn.day2.exception.ResourceNotFoundException;
 import ru.asocial.learn.day2.mapper.BillingAccountMapper;
 import ru.asocial.learn.day2.mapper.ClientMapper;
@@ -40,15 +41,22 @@ public class ClientService {
     private CurrencyService currencyService;
 
     @Autowired
-    private BillingAccountMapper billingAccountMapper;
-
-    @Autowired
     private PostingDAO postingDAO;
 
     @Transactional(readOnly = true)
     public ClientDTO findClientByExtId(String externalId) {
-        //TODO
-        return null;
+        List<Client> clientList = clientDao.findByExternalId(externalId);
+        if (clientList.isEmpty()) {
+            throw new ResourceNotFoundException("Client not found");
+        }
+        if (clientList.size() == 1) {
+            clientList.get(0).getAccounts();
+            ClientDTO dto = clientMapper.map(clientList.get(0), true);
+            fillAccountBalances(dto);
+            return dto;
+        }
+
+        throw new IncorrectResultSizeException("Too many records found");
     }
 
     @Transactional(readOnly = true)
