@@ -41,7 +41,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 
 `BusinessOperationService.createAndProcess` — одна `@Transactional`: создаёт `BusinessOperation`, валидирует клиентов через `ClientService.getClientOrThrow` и диспатчит по `BusinessOperationType`:
 
-- `DEPOSIT` → `DepositService` (реализован: одна проводка корсчёт банка → счёт клиента, `BillingTransaction` + `Posting`), `CARD_PAYMENT` → `CardPaymentService`, `TRANSFER` → `TransferService`, `CASH_WITHDRAWAL` → `CashWithdrawalService` (последние три — `//TODO`-заглушки, бросают `UnsupportedOperationException`).
+- `DEPOSIT` → `DepositService` (реализован: проводка касса банка → счёт клиента), `TRANSFER` → `TransferService` (реализован: перевод клиент → клиент одной проводкой, при комиссии между разными клиентами — вторая проводка на комиссионный счёт банка; недостаток средств на счёте клиента → `BusinessOperationException`), `CARD_PAYMENT` → `CardPaymentService`, `CASH_WITHDRAWAL` → `CashWithdrawalService` (последние два — `//TODO`-заглушки, бросают `UnsupportedOperationException`).
 
 ### Домены (JPA-сущности, не покидают сервисный слой)
 
@@ -65,6 +65,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 - `BillingAccountMapper` — `BillingAccount` → `BillingAccountDTO`;
 - `BusinessOperationMapper` — `BusinessOperation` → `BusinessOperationDTO` (client/client2 → clientId/clientId2, enum → строка);
 - `BillingTransactionMapper.map(transaction, mapPostings)` — проводки включаются флагом (по аналогии со счетами клиента);
+- `AccountHistoryMapper.map(posting, accountId)` — проводка → запись истории по счёту: счёт в кредите = +, в дебете = − (issue #6);
 - `CurrencyRateMapper` — `CurrencyRate` → `CurrencyRateDTO` (валюты — вложенные `CurrencyDto` через `CurrencyMapper`);
 - `CommissionMapper` — `Commission` → `CommissionDTO` (валюта → currencyId+currencyCode, банк → bankId+bankName).
 
@@ -78,16 +79,18 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | `consumer` | `CurrencyCreateConsumer`, `BusinessOperationConsumer` | `@KafkaListener`: десериализуют JSON в DTO, зовут сервисы |
 | `controller` | `CurrencyController` | REST валют: CRUD, валидация `Assert.notNull`, HTTP-коды |
 | `controller` | `ClientController` | REST клиентов: `POST /clients` (создание со счетами), `GET /clients/{id}` (со счетами) |
-| `controller` | `CommissionController` | REST тарифов комиссий: `POST /commissions` (создание), `GET /commissions/{id}` |
+| `controller` | `CommissionController` | REST тарифов комиссий: `POST /commissions` (создание), `GET /commissions/{id}`, `PUT /commissions/{id}` (обновление процента) |
 | `controller` | `BusinessOperationController` | `POST /business-operation` |
 | `service` | `CurrencyService`, `ClientService`, `BankService`, `CommissionService` | Бизнес-логика + границы транзакций (`@Transactional`), бросают `ResourceNotFoundException` |
 | `service` | `BusinessOperationService` | Создание + диспатч операций в одной транзакции |
+| `service` | `AccountHistoryService` | История транзакций по счёту клиента: проверка клиента и владения счётом, транзакции с проводками по счёту (issue #6) |
 | `service` | `BillingTransactionService` | Сохранение биллинг-транзакций с проверкой инварианта двойной записи (см. ниже) |
-| `service` | `DepositService` (реализован), `TransferService`, `CardPaymentService`, `CashWithdrawalService` (TODO) | Процессоры операций |
+| `service` | `DepositService`, `TransferService` (реализованы), `CardPaymentService`, `CashWithdrawalService` (TODO) | Процессоры операций |
 | `dao` | `CurrencyDao`, `ClientDao`, `BankDao`, `BusinessOperationDAO`, `CommissionDAO` (+ Impl) | Доступ к данным на **чистом JPA** (`@PersistenceContext EntityManager`), без Spring Data; JPQL в Impl |
 | `dao/billing` | `BillingTransactionDAO` / `Impl` | Доступ к биллинг-транзакциям: `save` (persist), без бизнес-проверок |
-| `dao/billing` | `PostingDAO` / `Impl` | Баланс счёта из проводок: `getAccountBalance(accountId)` = Σcredit − Σdebit (JPQL-агрегаты) |
-| `mapper` | `CurrencyMapper`, `ClientMapper`, `BillingAccountMapper`, `BusinessOperationMapper`, `BillingTransactionMapper`, `CurrencyRateMapper`, `CommissionMapper` | Сущность → DTO |
+| `dao/billing` | `PostingDAO` / `Impl` | `getAccountBalance(accountId)` = Σcredit − Σdebit (JPQL-агрегаты); `findByAccount(accountId)` — проводки счёта с `join fetch` транзакции, новые сверху |
+| `dao/billing` | `BillingAccountDAO` / `Impl` | `getById` биллинг-счёта |
+| `mapper` | `CurrencyMapper`, `ClientMapper`, `BillingAccountMapper`, `BusinessOperationMapper`, `BillingTransactionMapper`, `CurrencyRateMapper`, `AccountHistoryMapper`, `CommissionMapper` | Сущность → DTO |
 | `handler` | `ExceptionHandler` | `@ControllerAdvice` (extends `ResponseEntityExceptionHandler`): `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422, `UnsupportedOperationException` → 501, тело `ErrorResponse` |
 | `exception` | `ResourceNotFoundException`, `DuplicateResourceException` | Runtime-исключения |
 
@@ -103,6 +106,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | DELETE | `/api/currencies/{id}` | Удалить → 204 (404, если нет) |
 | POST | `/api/clients` | Создать клиента (со счетами), тело `CreateClientDTO` → 201 + Location |
 | GET | `/api/clients/{id}` | Получить клиента со счетами и балансами (404, если нет) |
+| GET | `/api/clients/{clientId}/accounts/{accountId}/transactions` | История по счёту: записи `{dateTime, amount (со знаком), currency, description}`, новые сверху; пустая история → 200 `[]`; нет клиента/счёта → 404, счёт чужого клиента → 422 |
 | POST | `/api/business-operation` | Тело `CreateBusinessOperationDTO {operationType, amount, clientId, clientId2?, accountNumber, accountNumber2?}` → 201 |
 | POST | `/api/commissions` | Создать тариф комиссии, тело `CreateCommissionDTO {value, currencyId, bankId}` → 201 + Location; null/неположительный `value` → 422, дубликат пары банк+валюта → 422 `DuplicateResourceException`, нет банка/валюты → 404 |
 | GET | `/api/commissions/{id}` | Получить тариф по id (404, если нет) |
@@ -126,10 +130,10 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 Раньше здесь были два бага — они уже исправлены: `CurrencyDaoImpl.findByCode` теперь делает `setParameter` + `getSingleResultOrNull()` (возвращает `Optional`), а предикат префикса в `WebConfig` ограничен пакетом `ru.asocial.learn` (ошибки больше не маскируются под 404 «No static resource error»).
 
 - **Сборка зелёная** (`mvn clean package`, проверено 2026-09-30). Ранее не компилировалась и содержала баги — все уже исправлены в коде: `BusinessOperationService.createAndProcess` возвращает DTO через `BusinessOperationMapper`; `amount` копируется из DTO; `BusinessOperationDAOImpl` — `@Repository` + `implements BusinessOperationDAO`; у `Posting` есть `@Id`; поле `accounts` живёт только в `Party` (у `Client` дублирующего поля нет).
-- **TODO-заглушки**: `TransferService` / `CardPaymentService` / `CashWithdrawalService` (бросают `UnsupportedOperationException("Not implemented yet")`), `ClientService.findClientByExtId` (`return null`), `CreateBillingTransactionDTO` (пустой).
+- **TODO-заглушки**: `CardPaymentService` / `CashWithdrawalService` (бросают `UnsupportedOperationException("Not implemented yet")`), `ClientService.findClientByExtId` (`return null`), `CreateBillingTransactionDTO` (пустой).
 - **Инвариант двойной записи** (issue #3) живёт в `BillingTransactionService.save` (сервисный слой, по итогам ревью PR #10): непустые проводки, оба счёта у каждой, положительная сумма, одна валюта; непрошедшая валидацию транзакция не сохраняется (`BusinessValidationException`). Структура `Posting` (одна сумма + обязательные дебет и кредит) сама обеспечивает Σдебет = Σкредит, отдельное сравнение сумм не нужно. Баланс — производное от проводок (`PostingDAO.getAccountBalance`), хранимого поля нет.
 - **Kafka**: адрес брокера `localhost:9092` зашит в `KafkaConfig`; без запущенного брокера консьюмеры бесконечно пытаются соединиться — приложение при этом стартует, но топики не работают. `auto.offset.reset=earliest`, так что при появлении брокера консьюмер прочитает сообщения с начала.
 - **Trailing slash не матчится**: в Spring Framework 6+ `/api/currencies/` не совпадает с маппингом `/api/currencies` — запрос уходит в статические ресурсы (`NoResourceFoundException: No static resource api/currencies`). Запрашивать без слэша или добавить `{"" , "/"}` в маппинг.
 - `data/` (живая файловая БД H2: `day2db.mv.db`, `day2db.trace.db`, `diagdb.mv.db`) по-прежнему не добавлена в `.gitignore`; сам `.gitignore`, `.gitattributes`, `.mvn/`, `mvnw*`, `jmeter/` пока не закоммичены (untracked).
 - `.github/modernize/java-upgrade/` — служебные hook-скрипты (Copilot java-upgrade), к приложению отношения не имеют.
-- Тесты: JPA-слайс (`@DataJpaTest`) на чистом H2 in-memory — `BillingTransactionServiceTest` (инвариант, сервисный слой) и `PostingDAOImplTest` (баланс). Веб-слой и Kafka в тестах не поднимаются.
+- Тесты: JPA-слайс (`@DataJpaTest`) на чистом H2 in-memory — `BillingTransactionServiceTest` (инвариант, сервисный слой), `PostingDAOImplTest` (баланс) и `AccountHistoryServiceTest` (история: знак, порядок, владение счётом). Веб-слой и Kafka в тестах не поднимаются.
