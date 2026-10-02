@@ -8,16 +8,13 @@ import org.springframework.context.annotation.Import;
 import ru.asocial.learn.day2.dao.billing.BillingTransactionDAOImpl;
 import ru.asocial.learn.day2.dao.billing.PostingDAOImpl;
 import ru.asocial.learn.day2.exception.BusinessValidationException;
-import ru.asocial.learn.day2.model.Bank;
 import ru.asocial.learn.day2.model.Client;
 import ru.asocial.learn.day2.model.Currency;
-import ru.asocial.learn.day2.model.Party;
 import ru.asocial.learn.day2.model.billing.BillingAccount;
 import ru.asocial.learn.day2.model.billing.BillingTransaction;
 import ru.asocial.learn.day2.model.billing.Posting;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -154,13 +151,7 @@ class BillingTransactionServiceTest extends TestBase{
         assertThat(transactionCount).isZero();
     }
 
-    private Posting posting(BillingAccount debit, BillingAccount credit, BigDecimal amount) {
-        Posting posting = new Posting();
-        posting.setDebitAccount(debit);
-        posting.setCreditAccount(credit);
-        posting.setAmount(amount);
-        return posting;
-    }
+
 
     private Client client() {
         Client client = new Client();
