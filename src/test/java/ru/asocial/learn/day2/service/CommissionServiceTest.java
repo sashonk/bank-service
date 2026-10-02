@@ -4,7 +4,6 @@ package ru.asocial.learn.day2.service;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import ru.asocial.learn.day2.dao.BankDAOImpl;
 import ru.asocial.learn.day2.dao.CommissionDAOImpl;
@@ -16,11 +15,7 @@ import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.mapper.CommissionMapper;
 import ru.asocial.learn.day2.mapper.CurrencyMapper;
 import ru.asocial.learn.day2.model.Bank;
-import ru.asocial.learn.day2.model.Commission;
 import ru.asocial.learn.day2.model.Currency;
-import ru.asocial.learn.day2.model.Party;
-import ru.asocial.learn.day2.model.billing.BillingAccount;
-import ru.asocial.learn.day2.model.billing.Posting;
 
 import java.math.BigDecimal;
 

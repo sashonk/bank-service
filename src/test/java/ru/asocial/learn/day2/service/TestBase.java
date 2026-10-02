@@ -8,13 +8,23 @@ import ru.asocial.learn.day2.model.Currency;
 import ru.asocial.learn.day2.model.Party;
 import ru.asocial.learn.day2.model.billing.BillingAccount;
 import ru.asocial.learn.day2.model.billing.BillingTransaction;
+import ru.asocial.learn.day2.model.billing.Posting;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public class TestBase {
 
     @Autowired
     protected TestEntityManager em;
+
+    protected Posting posting(BillingAccount debit, BillingAccount credit, BigDecimal amount) {
+        Posting posting = new Posting();
+        posting.setDebitAccount(debit);
+        posting.setCreditAccount(credit);
+        posting.setAmount(amount);
+        return posting;
+    }
 
     protected Currency currency(String code) {
         Currency currency = new Currency();
