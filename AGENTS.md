@@ -103,7 +103,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 | DELETE | `/api/currencies/{id}` | Удалить → 204 (404, если нет) |
 | POST | `/api/clients` | Создать клиента (со счетами), тело `CreateClientDTO` → 201 + Location |
 | GET | `/api/clients/{id}` | Получить клиента со счетами и балансами (404, если нет) |
-| GET | `/api/clients/{clientId}/accounts/{accountId}/transactions` | История по счёту: записи `{dateTime, amount (со знаком), currency, description}`, новые сверху; пустая история → 200 `[]`; нет клиента/счёта или чужой счёт → 404 |
+| GET | `/api/clients/{clientId}/accounts/{accountId}/transactions` | История по счёту: записи `{dateTime, amount (со знаком), currency, description}`, новые сверху; пустая история → 200 `[]`; нет клиента/счёта → 404, счёт чужого клиента → 422 |
 | POST | `/api/business-operation` | Тело `CreateBusinessOperationDTO {operationType, amount, clientId, clientId2?, accountNumber, accountNumber2?}` → 201 |
 
 Ошибки: `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422 (`UNPROCESSABLE_CONTENT`), `BusinessValidationException` / `BusinessOperationException` → 422, `UnsupportedOperationException` → 501 (`NOT_IMPLEMENTED`, так отвечают TODO-процессоры операций); тело — `ErrorResponse`. В `BillingAccountDTO` появилось поле `balance` (баланс из проводок, заполняется в `ClientService` после маппинга через `PostingDAO`).

@@ -10,6 +10,7 @@ import ru.asocial.learn.day2.dao.ClientDAOImpl;
 import ru.asocial.learn.day2.dao.billing.BillingAccountDAOImpl;
 import ru.asocial.learn.day2.dao.billing.PostingDAOImpl;
 import ru.asocial.learn.day2.dto.billing.AccountHistoryEntryDTO;
+import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.exception.ResourceNotFoundException;
 import ru.asocial.learn.day2.mapper.AccountHistoryMapper;
 import ru.asocial.learn.day2.model.Bank;
@@ -150,15 +151,15 @@ class AccountHistoryServiceTest {
     }
 
     @Test
-    void accountOfAnotherClientThrowsNotFound() {
+    void accountOfAnotherClientThrowsValidationError() {
         Currency rub = currency("RUB");
         Client ivanov = persistClient("Ivanov");
         Client petrov = persistClient("Petrov");
         BillingAccount petrovAccount = persistAccount(rub, petrov);
 
         assertThatThrownBy(() -> accountHistoryService.getAccountHistory(ivanov.getId(), petrovAccount.getId()))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("account not found");
+                .isInstanceOf(BusinessValidationException.class)
+                .hasMessageContaining("does not belong to client");
     }
 
     private void saveTransaction(String description, Instant dateTime, Posting posting) {

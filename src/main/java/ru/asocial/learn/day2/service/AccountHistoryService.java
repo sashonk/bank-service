@@ -7,6 +7,7 @@ import ru.asocial.learn.day2.dao.ClientDao;
 import ru.asocial.learn.day2.dao.billing.BillingAccountDAO;
 import ru.asocial.learn.day2.dao.billing.PostingDAO;
 import ru.asocial.learn.day2.dto.billing.AccountHistoryEntryDTO;
+import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.exception.ResourceNotFoundException;
 import ru.asocial.learn.day2.mapper.AccountHistoryMapper;
 import ru.asocial.learn.day2.model.Client;
@@ -43,10 +44,13 @@ public class AccountHistoryService {
         }
 
         BillingAccount account = billingAccountDAO.getById(accountId);
-        // Счёт чужой партии (или другого клиента) — как несуществующий в рамках этого клиента.
-        if (account == null || account.getParty() == null || !clientId.equals(account.getParty().getId())) {
-            throw new ResourceNotFoundException(
-                    "account not found, id = " + accountId + ", client id = " + clientId);
+        if (account == null) {
+            throw new ResourceNotFoundException("account not found, id = " + accountId);
+        }
+        // Счёт существует, но принадлежит другому участнику — это ошибка бизнес-валидации, а не «не найдено».
+        if (account.getParty() == null || !clientId.equals(account.getParty().getId())) {
+            throw new BusinessValidationException(
+                    "Billing account " + accountId + " does not belong to client " + clientId);
         }
 
         List<Posting> postings = postingDAO.findByAccount(accountId);
