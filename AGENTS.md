@@ -114,7 +114,7 @@ Kafka → BusinessOperationConsumer   → BusinessOperationService
 
 Ошибки: `ResourceNotFoundException` → 404, `DuplicateResourceException` → 422 (`UNPROCESSABLE_CONTENT`), `BusinessValidationException` / `BusinessOperationException` → 422, `UnsupportedOperationException` → 501 (`NOT_IMPLEMENTED`, так отвечают TODO-процессоры операций); тело — `ErrorResponse`. В `BillingAccountDTO` появилось поле `balance` (баланс из проводок, заполняется в `ClientService` после маппинга через `PostingDAO`).
 
-`rq.http` (IntelliJ HTTP Client) в корне почти пуст; `src/main/resources/static/index.html` — заглушка «DAY 2».
+`rq.http` (IntelliJ HTTP Client) в корне почти пуст; `src/main/resources/static/index.html` — главный экран мини-банка (issue #7): чистый HTML/JS без сборки, работает поверх REST (`GET /api/clients/me` c заголовком `X-External-Id` → счета с маскированными номерами (`••••` + последние 4 цифры) и балансами; клик по счёту → `GET /api/clients/{id}/accounts/{aid}/transactions` со знаковыми суммами).
 
 ## Конвенции проекта
 

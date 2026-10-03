@@ -1,7 +1,200 @@
-<!Doctype HTML>
-<html>
-<head>Day 2</head>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Мини-банк — ваши счета</title>
+    <style>
+        :root { --plus: #1a7f37; --minus: #c62828; --border: #d9d9de; --muted: #6e6e76; }
+        * { box-sizing: border-box; }
+        body { font-family: "Segoe UI", system-ui, sans-serif; margin: 0; background: #f4f4f6; color: #1d1d1f; }
+        .container { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+        h1 { font-size: 22px; margin: 0 0 16px; }
+        .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+        .ident-form { display: flex; gap: 8px; }
+        .ident-form input { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+        button { padding: 8px 16px; border: none; border-radius: 6px; background: #1d1d1f; color: #fff; font-size: 14px; cursor: pointer; }
+        button:hover { background: #3a3a3e; }
+        .client-name { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+        td { padding: 8px; border-bottom: 1px solid var(--border); }
+        tr:last-child td { border-bottom: none; }
+        .accounts tbody tr { cursor: pointer; }
+        .accounts tbody tr:hover { background: #f7f7f9; }
+        .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .amount-plus { color: var(--plus); white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .amount-minus { color: var(--minus); white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .muted { color: var(--muted); }
+        .error { color: var(--minus); margin: 12px 0 0; }
+        .hidden { display: none; }
+        .section-title { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+    </style>
+</head>
 <body>
-<h1>DAY 2</h1>
+<div class="container">
+    <h1>Мини-банк — ваши счета</h1>
+
+    <div class="card">
+        <div class="ident-form">
+            <input id="externalId" type="text" placeholder="Ваш идентификатор (externalId)" autocomplete="off">
+            <button id="loadBtn" type="button">Показать</button>
+        </div>
+        <p id="error" class="error hidden"></p>
+    </div>
+
+    <div id="profile" class="card hidden">
+        <p id="clientName" class="client-name"></p>
+        <table class="accounts">
+            <thead>
+            <tr><th>Счёт</th><th>Валюта</th><th style="text-align: right">Баланс</th></tr>
+            </thead>
+            <tbody id="accountsBody"></tbody>
+        </table>
+    </div>
+
+    <div id="historyCard" class="card hidden">
+        <p id="historyTitle" class="section-title"></p>
+        <table class="history">
+            <thead>
+            <tr><th>Дата</th><th>Операция</th><th style="text-align: right">Сумма</th></tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+        </table>
+        <p id="historyEmpty" class="muted hidden">Нет операций по счёту.</p>
+    </div>
+</div>
+
+<script>
+    'use strict';
+
+    // Экран работает поверх REST API мини-банка (issue #7): профиль и история счёта,
+    // идентификация — X-External-Id (фаза 1, без авторизации).
+
+    const API_BASE = '/api';
+    const externalIdInput = document.getElementById('externalId');
+    const loadBtn = document.getElementById('loadBtn');
+    const errorBox = document.getElementById('error');
+    const profileBox = document.getElementById('profile');
+    const accountsBody = document.getElementById('accountsBody');
+    const clientNameEl = document.getElementById('clientName');
+    const historyCard = document.getElementById('historyCard');
+    const historyTitle = document.getElementById('historyTitle');
+    const historyBody = document.getElementById('historyBody');
+    const historyEmpty = document.getElementById('historyEmpty');
+
+    let currentClientId = null;
+
+    externalIdInput.value = localStorage.getItem('externalId') || '';
+
+    loadBtn.addEventListener('click', () => loadProfile());
+    externalIdInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') loadProfile();
+    });
+
+    function esc(value) {
+        const div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    // Маскированный номер счёта: видны только последние 4 цифры.
+    function maskAccountNumber(number) {
+        const s = String(number || '');
+        return '•••• ' + s.slice(-4);
+    }
+
+    function formatAmount(value) {
+        return Number(value).toFixed(2);
+    }
+
+    function showError(message) {
+        errorBox.textContent = message;
+        errorBox.classList.remove('hidden');
+    }
+
+    function hideError() {
+        errorBox.classList.add('hidden');
+    }
+
+    async function api(path, headers) {
+        const response = await fetch(API_BASE + path, { headers: headers || {} });
+        if (!response.ok) {
+            let message = 'Ошибка ' + response.status;
+            try {
+                const body = await response.json();
+                if (body && body.message) message = body.message;
+            } catch (e) { /* тело не JSON — показываем код */ }
+            const error = new Error(message);
+            error.status = response.status;
+            throw error;
+        }
+        return response.json();
+    }
+
+    async function loadProfile() {
+        hideError();
+        historyCard.classList.add('hidden');
+        const externalId = externalIdInput.value.trim();
+        if (!externalId) {
+            showError('Введите идентификатор');
+            return;
+        }
+        localStorage.setItem('externalId', externalId);
+        try {
+            const client = await api('/clients/me', { 'X-External-Id': externalId });
+            currentClientId = client.id;
+            renderProfile(client);
+        } catch (e) {
+            profileBox.classList.add('hidden');
+            currentClientId = null;
+            showError(e.status === 404 ? 'Клиент не найден' : e.message);
+        }
+    }
+
+    function renderProfile(client) {
+        clientNameEl.textContent = [client.firstName, client.lastName].filter(Boolean).join(' ');
+        accountsBody.innerHTML = (client.accounts || []).map(account => `
+            <tr data-account-id="${esc(account.id)}">
+                <td class="num">${esc(maskAccountNumber(account.accountNumber))}</td>
+                <td>${esc(account.currencyCode)}</td>
+                <td class="num" style="text-align: right">${esc(formatAmount(account.balance))}</td>
+            </tr>`).join('');
+        profileBox.classList.remove('hidden');
+        accountsBody.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', () => loadHistory(row.dataset.accountId));
+        });
+    }
+
+    async function loadHistory(accountId) {
+        hideError();
+        historyBody.innerHTML = '';
+        historyEmpty.classList.add('hidden');
+        historyTitle.textContent = 'История по счёту';
+        historyCard.classList.remove('hidden');
+        try {
+            const entries = await api(`/clients/${currentClientId}/accounts/${accountId}/transactions`);
+            if (!entries.length) {
+                historyEmpty.classList.remove('hidden');
+                return;
+            }
+            historyBody.innerHTML = entries.map(entry => {
+                const amount = Number(entry.amount);
+                const cls = amount >= 0 ? 'amount-plus' : 'amount-minus';
+                const sign = amount >= 0 ? '+' : '−';
+                const date = new Date(entry.dateTime).toLocaleString('ru-RU');
+                return `
+                    <tr>
+                        <td class="num">${esc(date)}</td>
+                        <td>${esc(entry.description)}</td>
+                        <td class="${cls}" style="text-align: right">${sign}${esc(formatAmount(Math.abs(amount)))} ${esc(entry.currency)}</td>
+                    </tr>`;
+            }).join('');
+        } catch (e) {
+            historyCard.classList.add('hidden');
+            showError(e.message);
+        }
+    }
+</script>
 </body>
 </html>
