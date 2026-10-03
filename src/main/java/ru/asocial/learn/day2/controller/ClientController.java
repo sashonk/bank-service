@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.asocial.learn.day2.dto.ClientDTO;
@@ -46,8 +47,7 @@ public class ClientController {
         }
 
         @GetMapping(value = "/me")
-        public ResponseEntity<ClientDTO> getMe(HttpServletRequest request) {
-            String extId = request.getHeader("X-External-id");
+        public ResponseEntity<ClientDTO> getMe(@RequestHeader("X-External-Id") String extId) {
             if (extId == null) {
                 throw new BusinessValidationException("Missing required header \"X-External-id\"");
             }
