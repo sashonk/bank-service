@@ -1,5 +1,6 @@
 package ru.asocial.learn.day2.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +13,7 @@ import ru.asocial.learn.day2.dto.ClientDTO;
 import ru.asocial.learn.day2.dto.CreateClientDTO;
 import ru.asocial.learn.day2.dto.billing.AccountHistoryEntryDTO;
 import ru.asocial.learn.day2.service.AccountHistoryService;
+import ru.asocial.learn.day2.exception.BusinessValidationException;
 import ru.asocial.learn.day2.service.ClientService;
 import java.net.URI;
 import java.util.List;
@@ -41,5 +43,15 @@ public class ClientController {
         @GetMapping(value = "/{clientId}/accounts/{accountId}/transactions")
         public ResponseEntity<List<AccountHistoryEntryDTO>> getAccountHistory(@PathVariable Long clientId, @PathVariable Long accountId) {
             return ResponseEntity.ok(accountHistoryService.getAccountHistory(clientId, accountId));
+        }
+
+        @GetMapping(value = "/me")
+        public ResponseEntity<ClientDTO> getMe(HttpServletRequest request) {
+            String extId = request.getHeader("X-External-id");
+            if (extId == null) {
+                throw new BusinessValidationException("Missing required header \"X-External-id\"");
+            }
+            ClientDTO clientDTO = clientService.findClientByExtId(extId);
+            return ResponseEntity.ok(clientDTO);
         }
 }
